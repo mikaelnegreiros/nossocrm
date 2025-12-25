@@ -13,7 +13,7 @@
   - Settings (IA): “Outro (Digitar ID)” agora permite **digitar e salvar** um `modelId` customizado (não tenta mais salvar `aiModel=''`, que era rejeitado pelo backend).
     - Correção adicional: o `<select>` agora tem **estado de UI próprio**, então ao selecionar “Outro” o input aparece imediatamente (antes o select era controlado só por `aiModel` e “voltava”).
   - Kanban templates: ao aplicar templates (Modal e Wizard), o sistema agora **auto-preenche** `wonStageId`/`lostStageId` usando labels determinísticas do template (ex.: “Ganho”/“Perdido”, “Churn”), com fallback heurístico por nome.
-  - Kanban templates: adicionado **export de Board/Jornada** (gera `journey.json` compatível com a aba Community) + snippet pronto para colar no `registry.json` do repositório de templates.
+  - Kanban templates: adicionado **export de Board/Jornada** (gera arquivo JSON do template) e **import local** (upload/colar JSON) para instalar sem GitHub.
     - Correção: download via Blob URL agora é compatível com Safari (não revoga o URL imediatamente; fallback para abrir em nova aba).
     - Correção: `slugify()` do export agora evita regex avançada (unicode property escapes) para não quebrar em alguns browsers; o click de download passou a ter try/catch + toast de erro.
     - Diagnóstico: export agora mostra preview do `journey.json`, permite **copiar JSON**, e loga no console os parâmetros do download para rastrear bloqueios do navegador.

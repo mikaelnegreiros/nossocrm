@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import type { Board, BoardStage, JourneyDefinition, RegistryTemplate } from '@/types';
+import type { Board, BoardStage, JourneyDefinition } from '@/types';
 import { useToast } from '@/context/ToastContext';
 import { z } from 'zod';
 
@@ -90,35 +90,11 @@ function buildJourneyFromBoards(
 type Mode = 'board' | 'journey';
 type Panel = 'export' | 'import';
 
-function guessCategoryFromBoards(boards: Board[]) {
-  const text = boards.map(b => b.name).join(' ').toLowerCase();
-  if (/\b(vendas|sales|closer|pipeline)\b/.test(text)) return 'sales';
-  if (/\b(onboarding|implant|implementa|cs|sucesso|customer)\b/.test(text)) return 'onboarding';
-  if (/\b(pre[-\s]?venda|sdr|qualifica)\b/.test(text)) return 'sales';
-  return 'ops';
-}
-
 function buildDefaultJourneyName(selectedBoards: Board[]) {
   if (selectedBoards.length <= 1) return selectedBoards[0]?.name || 'Jornada';
   const first = selectedBoards[0]?.name ?? 'Board 1';
   const last = selectedBoards[selectedBoards.length - 1]?.name ?? 'Board N';
   return `Jornada - ${first} → ${last}`;
-}
-
-function buildDefaultDescription(selectedBoards: Board[]) {
-  if (selectedBoards.length === 0) return 'Template exportado do CRM';
-  if (selectedBoards.length === 1) return `Board exportado do CRM: ${selectedBoards[0].name}`;
-  return `Jornada com ${selectedBoards.length} boards: ${selectedBoards.map(b => b.name).join(' → ')}`;
-}
-
-function buildDefaultTags(selectedBoards: Board[]) {
-  const tags = new Set<string>(['kanban', 'crm']);
-  const text = selectedBoards.map(b => b.name).join(' ').toLowerCase();
-  if (/\b(pre[-\s]?venda|sdr|lead|mql)\b/.test(text)) tags.add('pre-sales');
-  if (/\b(vendas|sales|pipeline|negocia|proposta)\b/.test(text)) tags.add('sales');
-  if (/\b(onboarding|implant|implementa|treinamento)\b/.test(text)) tags.add('onboarding');
-  if (/\b(cs|sucesso|churn|upsell)\b/.test(text)) tags.add('cs');
-  return Array.from(tags);
 }
 
 const JourneySchema = z.object({
@@ -214,70 +190,13 @@ export function ExportTemplateModal(props: {
     return selectedBoardIds.map(id => byId.get(id)).filter(Boolean) as Board[];
   }, [boards, selectedBoardIds]);
 
-  // Registry snippet (optional helper)
-  const initialCategory = guessCategoryFromBoards([activeBoard]);
-  const [templateId, setTemplateId] = useState(() => slugify(activeBoard.name) || 'my-template');
-  const [templatePath, setTemplatePath] = useState(() => `${initialCategory}/${slugify(activeBoard.name) || 'my-template'}`);
-  const [templateName, setTemplateName] = useState(() => activeBoard.name);
-  const [templateDescription, setTemplateDescription] = useState(() => activeBoard.description || 'Template exportado do CRM');
-  const [templateAuthor, setTemplateAuthor] = useState('thaleslaray');
-  const [templateVersion, setTemplateVersion] = useState('1.0.0');
-  const [templateTags, setTemplateTags] = useState('kanban,crm');
-
-  const [templateMetaDirty, setTemplateMetaDirty] = useState(false);
-
+  // UX: when exporting a journey, keep a friendly default name, but never overwrite user edits.
   useEffect(() => {
-    // Jobs-style defaults: keep metadata sensible but never overwrite user edits.
-    const boardsForNaming = mode === 'journey' ? selectedBoards : [activeBoard];
-    if (mode === 'journey' && !journeyNameDirty) {
-      setJourneyName(buildDefaultJourneyName(selectedBoards));
-    }
-
-    if (!templateMetaDirty) {
-      const defaultName = mode === 'journey'
-        ? (journeyNameDirty ? journeyName : buildDefaultJourneyName(selectedBoards))
-        : activeBoard.name;
-      const tags = buildDefaultTags(boardsForNaming);
-      const category = guessCategoryFromBoards(boardsForNaming);
-      const id = slugify(defaultName) || slugify(activeBoard.name) || 'my-template';
-
-      setTemplateName(defaultName);
-      setTemplateDescription(activeBoard.description || buildDefaultDescription(boardsForNaming));
-      setTemplateId(id);
-      setTemplatePath(`${category}/${id}`);
-      setTemplateTags(tags.join(','));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, selectedBoards, activeBoard.id, activeBoard.name]);
-
-  useEffect(() => {
-    // If user edits the journey name, keep snippet name in sync unless they also edited metadata.
-    if (templateMetaDirty) return;
-    if (!journeyNameDirty) return;
     if (mode !== 'journey') return;
-    const id = slugify(journeyName) || 'my-template';
-    const category = guessCategoryFromBoards(selectedBoards);
-    setTemplateName(journeyName);
-    setTemplateId(id);
-    setTemplatePath(`${category}/${id}`);
+    if (journeyNameDirty) return;
+    setJourneyName(buildDefaultJourneyName(selectedBoards));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyName]);
-
-  const registrySnippet: RegistryTemplate = useMemo(() => {
-    const tags = templateTags
-      .split(',')
-      .map(t => t.trim())
-      .filter(Boolean);
-    return {
-      id: templateId.trim() || 'my-template',
-      path: templatePath.trim() || 'sales/my-template',
-      name: templateName.trim() || 'Template',
-      description: templateDescription.trim() || '',
-      author: templateAuthor.trim() || '',
-      version: templateVersion.trim() || '1.0.0',
-      tags,
-    };
-  }, [templateId, templatePath, templateName, templateDescription, templateAuthor, templateVersion, templateTags]);
+  }, [mode, selectedBoards]);
 
   const journeyJson = useMemo(() => {
     if (mode === 'board') {
@@ -345,16 +264,6 @@ export function ExportTemplateModal(props: {
       copy.splice(nextIdx, 0, item);
       return copy;
     });
-  };
-
-  const handleCopyRegistrySnippet = async () => {
-    const text = JSON.stringify(registrySnippet, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-      addToast('Snippet do registry.json copiado!', 'success');
-    } catch {
-      addToast('Não consegui copiar (permissão do navegador).', 'error');
-    }
   };
 
   const handleDownloadJourney = () => {
@@ -605,7 +514,7 @@ export function ExportTemplateModal(props: {
       )}
 
       {panel === 'export' && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50/50 dark:bg-white/5">
             <div className="text-sm font-bold text-slate-900 dark:text-white">1) Baixar arquivo do template</div>
@@ -726,97 +635,6 @@ export function ExportTemplateModal(props: {
                     {journeyJsonText}
                   </pre>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50/50 dark:bg-white/5">
-            <div className="text-sm font-bold text-slate-900 dark:text-white">2) Copiar registro da comunidade</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Clique em <b>Copiar snippet</b> e cole no `registry.json` do repositório.
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nome do template</label>
-                <input
-                  value={templateName}
-                  onChange={e => { setTemplateName(e.target.value); setTemplateMetaDirty(true); }}
-                  className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Descrição</label>
-                <input
-                  value={templateDescription}
-                  onChange={e => { setTemplateDescription(e.target.value); setTemplateMetaDirty(true); }}
-                  className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tags (separadas por vírgula)</label>
-                <input
-                  value={templateTags}
-                  onChange={e => { setTemplateTags(e.target.value); setTemplateMetaDirty(true); }}
-                  className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCopyRegistrySnippet}
-                className="px-4 py-2 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold flex items-center gap-2"
-              >
-                <Copy size={16} /> Copiar snippet
-              </button>
-            </div>
-
-            {showTechnicalDetails && (
-              <div className="mt-3 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">id</label>
-                    <input
-                      value={templateId}
-                      onChange={e => { setTemplateId(e.target.value); setTemplateMetaDirty(true); }}
-                      className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">path</label>
-                    <input
-                      value={templatePath}
-                      onChange={e => { setTemplatePath(e.target.value); setTemplateMetaDirty(true); }}
-                      className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">author</label>
-                    <input
-                      value={templateAuthor}
-                      onChange={e => { setTemplateAuthor(e.target.value); setTemplateMetaDirty(true); }}
-                      className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">version</label>
-                    <input
-                      value={templateVersion}
-                      onChange={e => { setTemplateVersion(e.target.value); setTemplateMetaDirty(true); }}
-                      className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <pre className="text-xs whitespace-pre-wrap rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-3 max-h-48 overflow-auto">
-                  {JSON.stringify(registrySnippet, null, 2)}
-                </pre>
               </div>
             )}
           </div>
