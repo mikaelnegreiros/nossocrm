@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { DealView } from '@/types';
 import { Building2, Hourglass, Trophy, XCircle } from 'lucide-react';
 import { ActivityStatusIcon } from './ActivityStatusIcon';
+import { priorityAriaLabelPtBr } from '@/utils/priority';
 
 interface DealCardProps {
   deal: DealView;
@@ -31,16 +32,8 @@ interface DealCardProps {
 // Check if deal is closed (won or lost)
 const isDealClosed = (deal: DealView) => deal.isWon || deal.isLost;
 
-// Get priority label for accessibility
-const getPriorityLabel = (priority: string | undefined) => {
-  if (!priority) return '';
-  switch (priority) {
-    case 'high': return 'prioridade alta';
-    case 'medium': return 'prioridade média';
-    case 'low': return 'prioridade baixa';
-    default: return '';
-  }
-};
+// Get priority label for accessibility (PT-BR)
+const getPriorityLabel = (priority: string | undefined) => priorityAriaLabelPtBr(priority);
 
 // Get initials from name
 const getInitials = (name: string) => {

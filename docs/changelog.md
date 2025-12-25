@@ -32,6 +32,7 @@
   - UX (Deals): `DealDetailModal` agora **fecha ao clicar fora** (backdrop click) e usa **z-index alto** para não ficar atrás da sidebar.
   - UX (Boards): modal **Editar Board** agora permite **reordenar etapas via drag-and-drop** (sem libs externas).
   - UX (Boards): drag-and-drop no modal **Editar Board** agora exibe **preview do item sendo arrastado** + estilo visual durante o drag (opacidade/sombra), evitando a sensação de “não está funcionando”.
+  - UX (Deals): textos de prioridade agora são normalizados para **PT-BR** (Baixa/Média/Alta) em todas as telas.
 
 ## 24/12/2025
 

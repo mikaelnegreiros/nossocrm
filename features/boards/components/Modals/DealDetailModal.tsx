@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { StageProgressBar } from '../StageProgressBar';
 import { ActivityRow } from '@/features/activities/components/ActivityRow';
+import { formatPriorityPtBr } from '@/utils/priority';
 
 interface DealDetailModalProps {
   dealId: string | null;
@@ -330,7 +331,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       <div
         // Backdrop + positioning wrapper. Clicking outside the panel should close the modal.
         // Use a high z-index so it never renders behind fixed sidebars/overlays.
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-9999 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
@@ -598,8 +599,8 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Prioridade</span>
-                      <span className="text-slate-900 dark:text-white capitalize">
-                        {deal.priority}
+                      <span className="text-slate-900 dark:text-white">
+                        {formatPriorityPtBr(deal.priority)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -860,7 +861,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
 
                 {activeTab === 'info' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/10 dark:to-dark-card p-6 rounded-xl border border-primary-100 dark:border-primary-500/20">
+                    <div className="bg-linear-to-br from-primary-50 to-white dark:from-primary-900/10 dark:to-dark-card p-6 rounded-xl border border-primary-100 dark:border-primary-500/20">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-primary-100 dark:bg-primary-500/20 rounded-lg text-primary-600 dark:text-primary-400">
                           <BrainCircuit size={20} />
@@ -878,7 +879,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                       {/* STRATEGY CONTEXT BAR */}
                       {dealBoard?.agentPersona && (
                         <div className="mb-6 bg-slate-900/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-3 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                          <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
                             <Bot size={20} />
                           </div>
                           <div className="flex-1">

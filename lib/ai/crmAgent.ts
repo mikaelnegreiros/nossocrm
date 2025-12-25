@@ -4,6 +4,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { CRMCallOptionsSchema, type CRMCallOptions } from '@/types/ai';
 import { createCRMTools } from './tools';
+import { formatPriorityPtBr } from '@/utils/priority';
 
 type AIProvider = 'google' | 'openai' | 'anthropic';
 
@@ -33,7 +34,7 @@ function formatCockpitSnapshotForPrompt(snapshot: any): string[] {
         const status = clampText(deal.status, 80);
         lines.push(`🧾 Deal (cockpit): ${title ?? '(sem título)'}${value != null ? ` — R$ ${value.toLocaleString('pt-BR')}` : ''}`);
         if (probability != null) lines.push(`   - Probabilidade: ${probability}%`);
-        if (priority) lines.push(`   - Prioridade: ${priority}`);
+        if (priority) lines.push(`   - Prioridade: ${formatPriorityPtBr(priority)}`);
         if (status) lines.push(`   - Status/Stage ID: ${status}`);
         const lossReason = clampText(deal.lossReason, 200);
         if (lossReason) lines.push(`   - Motivo perda: ${lossReason}`);
