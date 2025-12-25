@@ -681,7 +681,7 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
     : isSelectHome
       ? 'sm:max-w-xl lg:max-w-xl'
       : isSelectBrowse
-        ? 'sm:max-w-3xl lg:max-w-3xl'
+        ? 'sm:max-w-2xl lg:max-w-2xl'
         : 'lg:max-w-5xl';
 
   if (!isOpen) return null;
