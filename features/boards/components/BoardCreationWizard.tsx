@@ -39,6 +39,36 @@ interface ChatMessage {
   proposalData?: GeneratedBoard;
 }
 
+// IMPORTANT: Tailwind won't generate arbitrary class names returned by the AI at runtime.
+// Keep colors from a fixed palette so preview + created boards always have visible colors.
+const AI_STAGE_COLOR_PALETTE = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-yellow-500',
+  'bg-orange-500',
+  'bg-red-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+  'bg-teal-500',
+] as const;
+
+function normalizeAIStageColor(color: string | undefined, index: number) {
+  if (color && (AI_STAGE_COLOR_PALETTE as readonly string[]).includes(color)) return color;
+  return AI_STAGE_COLOR_PALETTE[index % AI_STAGE_COLOR_PALETTE.length];
+}
+
+function normalizeGeneratedBoardColors(board: GeneratedBoard): GeneratedBoard {
+  const stages = Array.isArray(board.stages) ? board.stages : [];
+  return {
+    ...board,
+    stages: stages.map((s, idx) => ({
+      ...s,
+      color: normalizeAIStageColor(s.color, idx),
+    })),
+  };
+}
+
 function normalizeStageLabel(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -446,7 +476,16 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
       const finalBoard: GeneratedBoard = {
         name: boardData.boardName, // Required field
         description: boardData.description,
-        stages: boardData.stages,
+        stages: normalizeGeneratedBoardColors({
+          name: boardData.boardName,
+          description: boardData.description,
+          stages: boardData.stages,
+          automationSuggestions: boardData.automationSuggestions,
+          goal: placeholderStrategy.goal,
+          agentPersona: placeholderStrategy.agentPersona,
+          entryTrigger: placeholderStrategy.entryTrigger,
+          confidence: 0.9,
+        }).stages,
         automationSuggestions: boardData.automationSuggestions,
         ...placeholderStrategy,
         confidence: 0.9,
@@ -503,7 +542,7 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
       const hasChanges =
         response.board && JSON.stringify(response.board) !== JSON.stringify(boardToRefine);
 
-      const proposalData = hasChanges && response.board ? response.board : undefined;
+      const proposalData = hasChanges && response.board ? normalizeGeneratedBoardColors(response.board) : undefined;
 
       setChatMessages(prev => [
         ...prev,
@@ -530,7 +569,7 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
   };
 
   const handleApplyProposal = (proposal: GeneratedBoard) => {
-    setGeneratedBoard(proposal);
+    setGeneratedBoard(normalizeGeneratedBoardColors(proposal));
     setPreviewBoard(null); // Clear preview since it's now the actual board
     setChatMessages(prev => [
       ...prev,
@@ -542,13 +581,14 @@ export const BoardCreationWizard: React.FC<BoardCreationWizardProps> = ({
     if (previewBoard === proposal) {
       setPreviewBoard(null); // Turn off preview
     } else {
-      setPreviewBoard(proposal); // Turn on preview
+      setPreviewBoard(normalizeGeneratedBoardColors(proposal)); // Turn on preview (ensure safe colors)
     }
   };
 
   const handleCreateFromAI = async () => {
     // Use previewBoard if active, otherwise generatedBoard
-    const boardToCreate = previewBoard || generatedBoard;
+    const boardToCreateRaw = previewBoard || generatedBoard;
+    const boardToCreate = boardToCreateRaw ? normalizeGeneratedBoardColors(boardToCreateRaw) : null;
     if (!boardToCreate) return;
 
     // PHASE 2: Generate Strategy (The "Simulator 2")

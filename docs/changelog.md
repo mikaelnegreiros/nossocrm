@@ -27,6 +27,7 @@
   - UX (Boards): corrigido conflito de `max-w` no Wizard (o `lg:max-w-5xl` estava vencendo e mantendo o modal largo mesmo no browse); agora o `max-w` é calculado sem classes conflitantes.
   - UX (Boards): browse do Wizard (Playbooks/Templates/Comunidade) agora usa **`max-w-2xl`** para ficar mais “picker” e menos “página”.
   - UX (Boards): modal “Criar board em branco” agora tem **scroll interno com `max-h` por viewport**, evitando estourar a área visível em telas menores e mantendo o footer sempre acessível.
+  - UX (Boards): preview/criação via **IA** agora normaliza cores das colunas usando uma **paleta fixa** (Tailwind não gera classes dinâmicas vindas da IA em runtime), garantindo que os boards gerados venham com cores visíveis.
 
 ## 24/12/2025
 
