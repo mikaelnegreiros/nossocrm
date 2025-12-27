@@ -27,6 +27,7 @@
     - Ajustado o conteúdo do guia para ficar **leigo-friendly** e esconder detalhes técnicos em seção colapsável.
     - Compatibilidade: webhook agora aceita/usa também **`Authorization: Bearer <secret>`** (mantendo `X-Webhook-Secret`) e o guia ganhou botão **Copiar** no exemplo de dados do lead.
     - Adicionado botão **“Copiar cURL (importar no n8n)”** no card de **Entrada de Leads** (fica na área inferior, separado das ações principais).
+    - Fix: padronização do slug da Edge Function para **`webhook-in`** (URL única).
 - **Debug Mode (UX)**:
   - Debug agora é **reativo** (sem refresh): toggle dispara evento (`DEBUG_MODE_EVENT`) e `DebugFillButton` usa `useDebugMode`.
   - Fix: geração de telefone fake agora é determinística (sem `fromRegExp`, evitando `\\` no número).
