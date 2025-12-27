@@ -2,6 +2,10 @@
 
 CRM multi-tenant com foco em produtividade (pipeline/boards, contatos, atividades, inbox) e recursos de I.A. integrados. O frontend e o backend (Route Handlers) vivem no mesmo projeto Next.js.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=COLOQUE_AQUI_A_URL_DO_SEU_REPO_NO_GITHUB)
+
+> Troque `COLOQUE_AQUI_A_URL_DO_SEU_REPO_NO_GITHUB` pela URL do repositório (ex.: `https://github.com/org/nosso-crm`).
+
 ## Stack
 
 - **Next.js (App Router)**: UI, páginas protegidas e APIs em `app/api/*`

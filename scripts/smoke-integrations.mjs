@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Smoke test for:
  * - Public API routes (single-tenant, API key)
