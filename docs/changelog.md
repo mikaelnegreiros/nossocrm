@@ -70,6 +70,7 @@
     - UX (Supabase Free — preflight Apple): com PAT + orgs carregadas, o wizard faz um preflight e **bloqueia “Criar projeto” antes de falhar**, mostrando diretamente o fluxo “Liberar 1 slot” quando o limite do Free já está atingido.
     - Fix (Supabase seleção de projeto): ao escolher um projeto de uma organização, o wizard agora usa a lista **da própria org** (e fallback por `ref`) para preencher `supabaseUrl/projectRef`, evitando o caso de “lista aparece, mas não seleciona”.
     - UX (Supabase projetos visíveis): a seleção de projetos da org agora é feita via **cards** (abrir/usar) em vez de `<select>`, evitando casos de “lista veio, mas não aparece”.
+    - UX (Apple A/B): introduzidos componentes **A** `PairingCard` (palco principal) e **B** `ActionSheet` (bottom sheet) e aplicado no passo Supabase: 1 CTA “Escolher projeto” abre o sheet com seleção de **org → projeto** (estilo pareamento).
     - UX (zero fricção): ao colar um PAT válido, o Supabase step tenta listar orgs automaticamente e **auto-avança** para “Destino” quando a verificação passa; se houver apenas 1 org, ela é selecionada automaticamente e o sistema já carrega os projetos.
 
 - **Build (fix)**:

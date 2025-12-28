@@ -4,6 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Shield } from 'lucide-react';
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'framer-motion';
+import { ActionSheet } from '@/components/ui/ActionSheet';
+import { PairingCard } from '@/components/ui/PairingCard';
+import { cn } from '@/utils/cn';
 
 type InstallerMeta = {
   enabled: boolean;
@@ -172,6 +175,9 @@ export default function InstallWizardPage() {
       activeProjects: Array<SupabaseProjectOption>;
     }>;
   } | null>(null);
+
+  const [supabasePickerOpen, setSupabasePickerOpen] = useState(false);
+  const [supabasePickerView, setSupabasePickerView] = useState<'org' | 'project'>('org');
 
   const [supabaseOrgsLoading, setSupabaseOrgsLoading] = useState(false);
   const [supabaseOrgsError, setSupabaseOrgsError] = useState<string | null>(null);
@@ -821,6 +827,13 @@ export default function InstallWizardPage() {
     setSupabaseUiStep('final');
   };
 
+  const selectedOrgLabel = useMemo(() => {
+    const slug = supabaseSelectedOrgSlug || supabaseCreateOrgSlug;
+    if (!slug) return '';
+    const o = supabaseOrgs.find((x) => x.slug === slug);
+    return o ? `${o.name} — ${o.slug}` : slug;
+  }, [supabaseCreateOrgSlug, supabaseOrgs, supabaseSelectedOrgSlug]);
+
   useEffect(() => {
     // “100% mágico”: ao colar o PAT e escolher a org, carregamos os projetos da org automaticamente.
     if (supabaseUiStep === 'pat') return;
@@ -1248,6 +1261,137 @@ export default function InstallWizardPage() {
                     </p>
                   </div>
 
+                  {/* iPhone-style picker (B): org -> projeto */}
+                  <ActionSheet
+                    isOpen={supabasePickerOpen}
+                    onClose={() => setSupabasePickerOpen(false)}
+                    title={supabasePickerView === 'org' ? 'Escolha uma organização' : 'Escolha um projeto'}
+                    description={
+                      supabasePickerView === 'org'
+                        ? 'Vamos listar os projetos da org escolhida.'
+                        : 'Um toque e seguimos em frente.'
+                    }
+                  >
+                    {supabasePickerView === 'org' ? (
+                      <div className="space-y-2">
+                        {supabasePreflightLoading ? (
+                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Preparando organizações…
+                          </div>
+                        ) : null}
+                        {supabasePreflightError ? (
+                          <div className="text-sm text-amber-700 dark:text-amber-300">
+                            {supabasePreflightError}
+                          </div>
+                        ) : null}
+
+                        <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                          {(supabasePreflight?.organizations || []).map((o) => {
+                            const plan = String((o as any)?.plan || '').toLowerCase();
+                            const isFree = plan === 'free';
+                            const labelPlan = plan ? plan : '—';
+                            return (
+                              <button
+                                key={o.slug}
+                                type="button"
+                                onClick={() => {
+                                  setSupabaseSelectedOrgSlug(o.slug);
+                                  setSupabaseCreateOrgSlug(o.slug);
+                                  setSupabaseSelectedOrgPlan((o as any)?.plan || null);
+                                  setSupabaseOrgProjects([]);
+                                  setSupabaseOrgProjectsLoadedKey('');
+                                  setSupabasePickerView('project');
+                                  void loadSupabaseOrganizationProjects(o.slug);
+                                }}
+                                className={cn(
+                                  'w-full text-left rounded-xl border px-3 py-3 transition',
+                                  'border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-white/5'
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                      {o.name}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                      {o.slug}
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 text-right">
+                                    <div className={cn('text-xs font-semibold', isFree ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300')}>
+                                      {labelPlan}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                      ativos: {Number((o as any)?.activeCount || 0)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {supabasePreflight?.organizations?.length ? null : (
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            Não encontramos organizações. Verifique o PAT.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => setSupabasePickerView('org')}
+                          className="text-xs underline underline-offset-2 text-slate-600 dark:text-slate-300"
+                        >
+                          voltar para organizações
+                        </button>
+
+                        {supabaseOrgProjectsLoading ? (
+                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Buscando projetos…
+                          </div>
+                        ) : null}
+                        {supabaseOrgProjectsError ? (
+                          <div className="text-sm text-amber-700 dark:text-amber-300">
+                            {supabaseOrgProjectsError}
+                          </div>
+                        ) : null}
+
+                        <div className="space-y-2 max-h-80 overflow-auto pr-1">
+                          {supabaseOrgProjects.map((p) => (
+                            <div
+                              key={p.ref}
+                              className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/30 p-3"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                  {p.name}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                  <span className="font-mono">{p.ref}</span>
+                                  {p.status ? ` · ${p.status}` : ''}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  selectSupabaseProject(p.ref);
+                                  setSupabasePickerOpen(false);
+                                }}
+                                className={`px-3 py-2 rounded-xl text-sm font-semibold text-white ${TEAL.solid}`}
+                              >
+                                Usar
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </ActionSheet>
+
                   {/* Step 1: PAT (active) */}
                   {supabaseUiStep === 'pat' ? (
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/50 space-y-3">
@@ -1323,39 +1467,49 @@ export default function InstallWizardPage() {
 
                   {/* Step 2: Choose / create project */}
                   {supabaseUiStep === 'project' ? (
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                          2) Escolha (ou crie) o projeto Supabase
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSupabaseUiStep('pat')}
-                            className="px-2 py-1 rounded-full text-[11px] font-semibold border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/30 text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-white/10"
-                            title="Editar PAT"
-                          >
-                            PAT ✅ <span className="font-mono">{maskValue(supabaseAccessToken)}</span>
-                          </button>
-                          {supabaseUrl.trim() ? (
+                    <div className="space-y-3">
+                      <PairingCard
+                        hero={<Shield className="w-5 h-5 text-cyan-600 dark:text-cyan-300" />}
+                        eyebrow="Destino"
+                        title="Escolha o projeto Supabase"
+                        subtitle="Um toque para escolher um projeto (ou criar um novo)."
+                        footer={
+                          <div className="flex items-center justify-between gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setSupabaseUiStep('pat')}
+                              className="text-xs underline underline-offset-2 text-slate-600 dark:text-slate-300"
+                            >
+                              editar PAT
+                            </button>
                             <button
                               type="button"
                               onClick={() => {
-                                setSupabaseUrl('');
-                                setSupabaseProjectRef('');
-                                setSupabaseProjectRefTouched(false);
-                                setSupabaseResolvedOk(false);
-                                setSupabaseResolvedLabel(null);
-                                setSupabaseResolveError(null);
-                                setSupabaseUiStep('project');
+                                setSupabasePickerView('org');
+                                setSupabasePickerOpen(true);
                               }}
-                              className="text-xs underline underline-offset-2 text-slate-600 dark:text-slate-300"
+                              className={`px-3 py-2 rounded-xl text-sm font-semibold text-white ${TEAL.solid}`}
                             >
-                              trocar projeto
+                              Escolher projeto
                             </button>
-                          ) : null}
+                          </div>
+                        }
+                      >
+                        <div className="space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400">PAT</span>
+                            <span className="font-mono">sbp…{supabaseAccessToken.trim().slice(-4)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400">Organização</span>
+                            <span className="truncate">{selectedOrgLabel || '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400">Projeto</span>
+                            <span className="font-mono">{supabaseSelectedProjectRef || '—'}</span>
+                          </div>
                         </div>
-                      </div>
+                      </PairingCard>
 
                       <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
                         <label className="flex items-center gap-2">

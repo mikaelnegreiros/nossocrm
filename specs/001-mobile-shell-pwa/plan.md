@@ -10,7 +10,10 @@
 Transformar o NossoCRM web em uma experiência **mobile/tablet comparável a app** (sem app nativo), entregando:
 - **Mobile**: bottom navigation + flows core em **Fullscreen Sheets**
 - **Tablet**: **navigation rail**
-- **Boards**: mobile-first (list por estágio) e ações essenciais do deal\n+- **PWA**: instalável com **prompt automático** (com UX adequada para iOS/Android)\n+\nA abordagem prioriza mudanças no **app shell** e padronização de overlays/sheets, mantendo o backend e os dados existentes.
+- **Boards**: mobile-first (list por estágio) e ações essenciais do deal
+- **PWA**: instalável com **prompt automático** (com UX adequada para iOS/Android)
+
+A abordagem prioriza mudanças no **app shell** e padronização de overlays/sheets, mantendo o backend e os dados existentes.
 
 ## Technical Context
 
@@ -96,10 +99,23 @@ public/
 
 ## Phase 0: Research & Decisions (output: research.md)
 
-Research focuses on:\n+- PWA approach for Next.js 16 App Router (manifest + service worker)\n+- Install prompt behavior across iOS/Android/desktop\n+- Sheet UX patterns compatible with existing modal architecture\n+\n+See `research.md` for decisions and alternatives.
+Research focuses on:
+- PWA approach for Next.js 16 App Router (manifest + service worker)
+- Install prompt behavior across iOS/Android/desktop
+- Sheet UX patterns compatible with existing modal architecture
+
+See `research.md` for decisions and alternatives.
 
 ## Phase 1: Design Artifacts (output: data-model.md, contracts/, quickstart.md)
 
-- `data-model.md`: UI state entities (navigation destinations, install state, sheet flows)\n+- `contracts/`: no new server API contracts for MVP; document that explicitly\n+- `quickstart.md`: how to validate mobile/tablet + PWA locally
+- `data-model.md`: UI state entities (navigation destinations, install state, sheet flows)
+- `contracts/`: no new server API contracts for MVP; document that explicitly
+- `quickstart.md`: how to validate mobile/tablet + PWA locally
 
-## Phase 2: Implementation Outline (high-level)\n+\n+- Add adaptive navigation (BottomNav / Rail) with safe-area\n+- Introduce Sheet system and migrate Deal/Activity/Contact flows on mobile\n+- Boards: list-first on mobile + no-drag stage move\n+- PWA MVP: manifest, icons, service worker (assets), automatic prompt/banner UX\n+- Verify constitution gates: RLS unaffected, no Public API changes, changelog updates when code rollout begins
+## Phase 2: Implementation Outline (high-level)
+
+- Add adaptive navigation (BottomNav / Rail) with safe-area
+- Introduce Sheet system and migrate Deal/Activity/Contact flows on mobile
+- Boards: list-first on mobile + no-drag stage move
+- PWA MVP: manifest, icons, service worker (assets), automatic prompt/banner UX
+- Verify constitution gates: RLS unaffected, no Public API changes, changelog updates when code rollout begins

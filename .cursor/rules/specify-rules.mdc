@@ -9,8 +9,13 @@ Auto-generated from all feature plans. Last updated: 2025-12-27
 ## Project Structure
 
 ```text
-src/
-tests/
+app/
+components/
+features/
+lib/
+supabase/
+docs/
+test/
 ```
 
 ## Commands

@@ -38,7 +38,10 @@
 
 ## Decision 3: BottomNav (mobile) + Rail (tablet) strategy
 
-**Decision**: Adaptive navigation with explicit destinations:\n+- Mobile: BottomNav = Inbox, Boards, Contatos, Atividades, Mais\n+- Tablet: Navigation rail = same (icons)\n+- Desktop: existing sidebar remains
+**Decision**: Adaptive navigation with explicit destinations:
+- Mobile: BottomNav = Inbox, Boards, Contatos, Atividades, Mais
+- Tablet: Navigation rail = same (icons)
+- Desktop: existing sidebar remains
 
 **Rationale**:
 - Aligns with the product direction you confirmed: mobile-first + rail on tablet.
@@ -46,7 +49,10 @@
 
 ## Decision 4: Sheets for mobile “detail/edit” flows
 
-**Decision**: Introduce a `Sheet`/`FullscreenSheet` primitive and use it for:\n+- Deal detail\n+- Create/edit (Activity/Contact/Deal)\n+- Filters
+**Decision**: Introduce a `Sheet`/`FullscreenSheet` primitive and use it for:
+- Deal detail
+- Create/edit (Activity/Contact/Deal)
+- Filters
 
 **Rationale**:
 - Avoids modal breakage and stacking issues on small screens.
@@ -54,4 +60,7 @@
 
 ## Gate Re-check (Constitution)
 
-- Security/RLS: unchanged (client UI only)\n+- Public API contract: unchanged\n+- Mobile/tablet UX: primary focus, validated by QA viewports\n+- Changelog: will be updated when implementation starts (code changes) and before release
+- Security/RLS: unchanged (client UI only)
+- Public API contract: unchanged
+- Mobile/tablet UX: primary focus, validated by QA viewports
+- Changelog: will be updated when implementation starts (code changes) and before release
