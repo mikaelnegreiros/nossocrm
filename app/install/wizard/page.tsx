@@ -567,12 +567,12 @@ export default function InstallWizardPage() {
             if (existingProj.status?.toUpperCase().includes('PAUSING')) {
               console.log('[CONFLICT] Projeto está PAUSING, iniciando polling...');
               setPausePolling(true);
-              pollProjectStatus(existingProj.ref)
-                .then(finalStatus => {
-                  console.log('[CONFLICT] Polling completo, status:', finalStatus);
-                  setConflictingProject(prev => prev ? { ...prev, status: finalStatus } : null);
+              pollProjectStatus(existingProj.ref, 'pausing')
+                .then(({ finalStatus, paused }) => {
+                  console.log('[CONFLICT] Polling completo, status:', finalStatus, 'paused:', paused);
+                  setConflictingProject((prev) => (prev ? { ...prev, status: paused ? 'INACTIVE' : finalStatus } : null));
                 })
-                .catch(pollErr => {
+                .catch((pollErr) => {
                   console.error('[CONFLICT] Erro no polling:', pollErr);
                   setSupabaseCreateError(pollErr instanceof Error ? pollErr.message : 'Timeout');
                 })
@@ -592,39 +592,56 @@ export default function InstallWizardPage() {
     }
   };
   
-  const pollProjectStatus = async (projectRef: string): Promise<string> => {
+  const fetchProjectStatus = async (projectRef: string): Promise<{ rawStatus: string; normalized: string }> => {
+    const res = await fetch('/api/installer/supabase/project-status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        installerToken: installerToken.trim() || undefined,
+        accessToken: supabaseAccessToken.trim(),
+        projectRef,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    const rawStatus = String(data?.status ?? '').trim();
+    const normalized = rawStatus.toUpperCase();
+    return { rawStatus, normalized };
+  };
+
+  const isPausedProjectStatus = (normalized: string) => {
+    // Docs confirm INACTIVE; in practice we may see variants or "PAUSED"
+    return (
+      normalized === 'INACTIVE' ||
+      normalized.startsWith('INACTIVE') ||
+      normalized === 'PAUSED' ||
+      normalized.includes('PAUSED')
+    );
+  };
+
+  const pollProjectStatus = async (
+    projectRef: string,
+    mode: 'pause' | 'pausing'
+  ): Promise<{ finalStatus: string; paused: boolean }> => {
     const maxMs = 180_000; // 3min (pausar pode demorar)
     const intervalMs = 2000;
     const maxAttempts = Math.ceil(maxMs / intervalMs);
-    let attempts = 0;
 
+    let attempts = 0;
     while (attempts < maxAttempts) {
       try {
-        const res = await fetch('/api/installer/supabase/project-status', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            installerToken: installerToken.trim() || undefined,
-            accessToken: supabaseAccessToken.trim(),
-            projectRef,
-          }),
-        });
+        const { rawStatus, normalized } = await fetchProjectStatus(projectRef);
+        console.log(`[pollProjectStatus:${mode}] Attempt ${attempts + 1}: status = ${rawStatus || '(null)'}`);
 
-        if (res.ok) {
-          const data = await res.json().catch(() => null);
-          const rawStatus = String(data?.status ?? '').trim();
-          const status = rawStatus.toUpperCase();
-          console.log(`[pollProjectStatus] Attempt ${attempts + 1}: status = ${rawStatus || '(null)'}`);
+        const paused = isPausedProjectStatus(normalized);
+        if (paused) return { finalStatus: 'INACTIVE', paused: true };
 
-          // "Pausado" no dashboard pode vir como INACTIVE/PAUSED (ou variantes)
-          const isPaused = status === 'INACTIVE' || status.startsWith('INACTIVE') || status.includes('PAUSED') || status === 'PAUSED';
-          if (isPaused) return 'INACTIVE';
-
-          // Se sair de PAUSING pra outro status, atualiza e sai pra destravar UI
-          if (status && !status.includes('PAUSING')) return status;
+        const isPausing = normalized.includes('PAUSING');
+        if (mode === 'pausing' && !isPausing) {
+          // Saiu de PAUSING pra outro estado (ex: ACTIVE_HEALTHY). Destrava UI.
+          return { finalStatus: normalized || 'UNKNOWN', paused: false };
         }
       } catch (err) {
-        console.error('[pollProjectStatus] Error:', err);
+        console.error(`[pollProjectStatus:${mode}] Error:`, err);
       }
 
       attempts++;
@@ -644,7 +661,10 @@ export default function InstallWizardPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ installerToken: installerToken.trim() || undefined, accessToken: supabaseAccessToken.trim(), projectRef }),
       });
-      if (!res.ok) throw new Error('Falha ao pausar');
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Falha ao pausar');
+
+      await pollProjectStatus(projectRef, 'pause');
       
       setSupabaseUiStep('deciding');
       
@@ -1169,6 +1189,29 @@ export default function InstallWizardPage() {
                             O projeto está sendo pausado. Aguarde alguns segundos...
                           </p>
                         </div>
+
+                        {supabaseCreateError && !pausePolling && (
+                          <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+                            <div className="text-red-300 text-sm mb-2">{supabaseCreateError}</div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  setSupabaseCreateError(null);
+                                  setPausePolling(true);
+                                  const { finalStatus, paused } = await pollProjectStatus(conflictingProject.ref, 'pausing');
+                                  setConflictingProject({ ...conflictingProject, status: paused ? 'INACTIVE' : finalStatus });
+                                } catch (err) {
+                                  setSupabaseCreateError(err instanceof Error ? err.message : 'Erro ao verificar');
+                                } finally {
+                                  setPausePolling(false);
+                                }
+                              }}
+                              className="w-full px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
+                            >
+                              Verificar de novo
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -1180,7 +1223,10 @@ export default function InstallWizardPage() {
                       {(conflictingProject.status?.toUpperCase() === 'ACTIVE_HEALTHY' || conflictingProject.status?.toUpperCase() === 'ACTIVE') && (
                         <button
                           onClick={async () => {
+                            const prevStatus = conflictingProject.status;
                             try {
+                              // Força UI de espera (banner) imediatamente
+                              setConflictingProject({ ...conflictingProject, status: 'PAUSING' });
                               setSupabasePausingRef(conflictingProject.ref);
                               setPausePolling(true);
                               setSupabaseCreateError(null);
@@ -1195,16 +1241,18 @@ export default function InstallWizardPage() {
                                   projectRef: conflictingProject.ref 
                                 }),
                               });
-                              if (!res.ok) throw new Error('Falha ao pausar');
+                              const data = await res.json().catch(() => null);
+                              if (!res.ok) throw new Error(data?.error || 'Falha ao pausar');
                               
                               // 2. Aguarda projeto pausar (polling)
-                              const finalStatus = await pollProjectStatus(conflictingProject.ref);
+                              const { paused } = await pollProjectStatus(conflictingProject.ref, 'pause');
                               
                               // 3. Atualiza o status do conflictingProject
-                              setConflictingProject({ ...conflictingProject, status: finalStatus });
+                              setConflictingProject({ ...conflictingProject, status: paused ? 'INACTIVE' : conflictingProject.status });
                               
                             } catch (err) {
                               setSupabaseCreateError(err instanceof Error ? err.message : 'Erro ao pausar');
+                              setConflictingProject({ ...conflictingProject, status: prevStatus });
                             } finally {
                               setSupabasePausingRef(null);
                               setPausePolling(false);

@@ -2,6 +2,15 @@
 
 ## 28/12/2025
 
+- **Installer Wizard — Pause realmente confiável (status + UX)**:
+  - **Correção**: Polling de pausa agora tem dois modos:
+    - **`pause`**: só finaliza quando o projeto estiver efetivamente pausado (`INACTIVE` / `INACTIVE_*` / `PAUSED`).
+    - **`pausing`**: usado quando o backend já retorna `PAUSING`; finaliza quando sair de `PAUSING` (ou pausar).
+  - **Motivo**: após `POST /pause`, o Supabase pode demorar alguns segundos mantendo `ACTIVE_HEALTHY` antes de mudar pra `PAUSING/INACTIVE`.
+  - **UX**: ao clicar em **Pausar**, a UI força estado `PAUSING` imediatamente (mostra só o banner). Se der timeout, aparece apenas **"Verificar de novo"**.
+  - **Arquivo**: `app/install/wizard/page.tsx`
+
+
 - **Installer Wizard — Polling de pausa mais tolerante**:
   - **Problema**: A API do Supabase pode retornar status de pausa como `PAUSED`, `inactive` ou variantes (não exatamente `INACTIVE`), causando timeout mesmo com o projeto já pausado no painel.
   - **Solução**: O polling agora normaliza o status e considera pausado quando:
