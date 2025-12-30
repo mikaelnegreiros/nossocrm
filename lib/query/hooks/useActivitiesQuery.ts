@@ -159,6 +159,14 @@ export const useCreateActivity = () => {
       queryClient.setQueryData<Activity[]>(queryKeys.activities.lists(), (old = []) => {
         if (!old) return [data];
         const tempId = context?.tempId;
+        
+        // Check if activity already exists (race condition: Realtime may have already refetched)
+        const existingIndex = old.findIndex(a => a.id === data.id);
+        if (existingIndex !== -1) {
+          // Activity already exists, just re-sort (Realtime already added it)
+          return sortActivitiesSmart(old);
+        }
+        
         if (tempId) {
           // Remove temp activity, add real one, and re-sort
           const withoutTemp = old.filter(a => a.id !== tempId);
@@ -200,9 +208,11 @@ export const useUpdateActivity = () => {
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.activities.all });
       const previousActivities = queryClient.getQueryData<Activity[]>(queryKeys.activities.lists());
-      queryClient.setQueryData<Activity[]>(queryKeys.activities.lists(), (old = []) =>
-        old.map(activity => (activity.id === id ? { ...activity, ...updates } : activity))
-      );
+      queryClient.setQueryData<Activity[]>(queryKeys.activities.lists(), (old = []) => {
+        const updated = old.map(activity => (activity.id === id ? { ...activity, ...updates } : activity));
+        // Re-sort after update (especially important if date changed)
+        return sortActivitiesSmart(updated);
+      });
       return { previousActivities };
     },
     onError: (_error, _variables, context) => {
